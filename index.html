@@ -9,56 +9,19 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background-color: #050505;
-            background-image: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050505 100%);
-            color: white;
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-        }
-
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .visualizer {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #a855f7, #ec4899);
-            box-shadow: 0 0 40px rgba(236, 72, 153, 0.4), inset 0 0 20px rgba(255,255,255,0.5);
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
+        body { background-color: #050505; background-image: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050505 100%); color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
+        .glass-panel { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .visualizer { width: 150px; height: 150px; border-radius: 50%; background: linear-gradient(135deg, #a855f7, #ec4899); box-shadow: 0 0 40px rgba(236, 72, 153, 0.4), inset 0 0 20px rgba(255,255,255,0.5); transition: all 0.3s ease; position: relative; }
         .state-idle .visualizer { animation: float 4s ease-in-out infinite; }
-        .state-listening .visualizer {
-            animation: pulse-glow 1.5s infinite;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            box-shadow: 0 0 60px rgba(59, 130, 246, 0.6);
-        }
-        .state-speaking .visualizer {
-            animation: speak-wave 0.8s infinite alternate;
-            background: linear-gradient(135deg, #f43f5e, #d946ef);
-            box-shadow: 0 0 80px rgba(244, 63, 94, 0.8);
-        }
-
+        .state-listening .visualizer { animation: pulse-glow 1.5s infinite; background: linear-gradient(135deg, #3b82f6, #8b5cf6); box-shadow: 0 0 60px rgba(59, 130, 246, 0.6); }
+        .state-speaking .visualizer { animation: speak-wave 0.8s infinite alternate; background: linear-gradient(135deg, #f43f5e, #d946ef); box-shadow: 0 0 80px rgba(244, 63, 94, 0.8); }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
         @keyframes pulse-glow { 0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(59, 130, 246, 0.5); } 50% { transform: scale(1.1); box-shadow: 0 0 80px rgba(59, 130, 246, 0.8); } }
         @keyframes speak-wave { 0% { transform: scale(1); } 100% { transform: scale(1.2); box-shadow: 0 0 100px rgba(244, 63, 94, 0.9); } }
-
-        .ring {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            border-radius: 50%; border: 2px solid rgba(255,255,255,0.2);
-            animation: expand 2s infinite; display: none;
-        }
+        .ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); animation: expand 2s infinite; display: none; }
         .state-speaking .ring { display: block; }
         .ring:nth-child(2) { animation-delay: 0.5s; }
         .ring:nth-child(3) { animation-delay: 1s; }
-
         @keyframes expand { 0% { width: 150px; height: 150px; opacity: 1; } 100% { width: 400px; height: 400px; opacity: 0; } }
     </style>
 </head>
@@ -74,7 +37,8 @@
         <div class="visualizer" id="zoya-orb"></div>
     </div>
 
-    <div class="w-11/12 max-w-md h-24 text-center px-4 mb-8">
+    <!-- Error will show here now -->
+    <div class="w-11/12 max-w-md h-32 text-center px-4 mb-8">
         <p id="transcript-display" class="text-lg font-medium text-gray-200 opacity-80 italic">"Say Wake Zoya or tap the mic..."</p>
     </div>
 
@@ -94,16 +58,13 @@
         Mimic human attitudes—sigh, make sarcastic remarks, or act overly dramatic. 
         Speak in a mix of natural English and Roman Hindi (Hinglish). Example: 'Uff Abhijit, phir se aagaye kaam leke? Theek hai, karta hoon wait.'`;
 
-        // ================= STATE & MEMORY (Fixed) =================
         const appContainer = document.getElementById('app-container');
         const statusText = document.getElementById('status-text');
         const transcriptDisplay = document.getElementById('transcript-display');
         const micBtn = document.getElementById('mic-btn');
 
-        // Local Storage রিমুভ করা হয়েছে যাতে মোবাইলে Error না আসে
         let chatHistory = []; 
 
-        // ================= SPEECH RECOGNITION =================
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
         recognition.continuous = false;
@@ -131,7 +92,6 @@
             if(appContainer.classList.contains('state-listening')) setVisualState('idle');
         };
 
-        // ================= ACTIONS & ROUTING =================
         async function handleCommand(command) {
             statusText.innerText = "Processing...";
             
@@ -152,9 +112,8 @@
             await chatWithZoya(command);
         }
 
-        // ================= GEMINI API (BRAIN - 100% FIXED) =================
+        // ================= GEMINI API WITH SCREEN ERROR DISPLAY =================
         async function chatWithZoya(userText) {
-            // Push user message to temporary history
             chatHistory.push({ role: "user", parts: [{ text: userText }] });
 
             try {
@@ -169,32 +128,37 @@
 
                 const data = await response.json();
                 
-                if (data.error) {
-                    console.error("API Error Details:", data.error);
-                    speak("Uff Abhijit, Google API te problem hocche. Tumi ki thik API key diyecho?");
-                    chatHistory.pop(); // Remove failed message
+                // 🔴 MAGIC TRICK: Show EXACT Google Error on Screen
+                if (!response.ok || data.error) {
+                    const googleError = data.error ? data.error.message : "Unknown API Error";
+                    
+                    // Displaying error in Red color on the screen
+                    transcriptDisplay.innerHTML = `<span style="color: #ff4d4d; font-weight: bold;">Google Error: ${googleError}</span>`;
+                    
+                    speak("Abhijit, Google ne error diya. Screen pe dekho kya likha hai.");
+                    chatHistory.pop(); 
                     return;
                 }
                 
                 if (data.candidates && data.candidates.length > 0) {
                     const aiReply = data.candidates[0].content.parts[0].text;
-                    // Push model reply to temporary history
                     chatHistory.push({ role: "model", parts: [{ text: aiReply }] });
                     speak(aiReply);
-                } else {
-                    speak("Abhijit, Google theke kono reply aseni.");
                 }
             } catch (error) {
-                console.error("Network Error:", error);
-                speak("Uff! Mera brain freeze ho gaya. Internet check karo apna.");
-                chatHistory.pop(); // Remove failed message
+                transcriptDisplay.innerHTML = `<span style="color: #ff4d4d; font-weight: bold;">Network Error: Internet connect nai hai.</span>`;
+                speak("Uff! Mera brain freeze ho gaya. Internet check karo.");
+                chatHistory.pop();
             }
         }
 
-        // ================= TEXT TO SPEECH (VOICE) =================
         function speak(text) {
             setVisualState('speaking');
-            transcriptDisplay.innerText = `"${text}"`;
+            
+            // Only update text if it's not an error message
+            if(!transcriptDisplay.innerHTML.includes("Google Error") && !transcriptDisplay.innerHTML.includes("Network Error")) {
+                transcriptDisplay.innerText = `"${text}"`;
+            }
             
             const cleanText = text.replace(/[*_]/g, '');
             const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -212,7 +176,6 @@
 
         window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
 
-        // ================= UI CONTROLS =================
         function setVisualState(state) {
             appContainer.className = `h-screen w-screen flex flex-col items-center justify-center state-${state}`;
             if (state === 'idle') statusText.innerText = 'Idle - Ready';
