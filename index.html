@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoya - AI Voice Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* CSS Design Details */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: #050505;
+            background-image: radial-gradient(circle at center, #1a1a2e 0%, #050505 100%);
+            color: white;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .glass-container {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 40px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            background: linear-gradient(90deg, #d383ff, #83a4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 40px;
+        }
+
+        #visualizer {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 20px 0 40px 0;
+            transition: all 0.3s ease;
+        }
+
+        .idle {
+            background: radial-gradient(circle, rgba(131,164,255,0.2) 0%, rgba(211,131,255,0) 70%);
+            box-shadow: 0 0 20px rgba(131,164,255,0.1);
+            animation: breathe 4s infinite alternate;
+        }
+
+        .listening {
+            background: radial-gradient(circle, rgba(131,164,255,0.8) 0%, rgba(211,131,255,0.4) 50%, transparent 80%);
+            box-shadow: 0 0 40px rgba(131,164,255,0.6), 0 0 80px rgba(211,131,255,0.4);
+            animation: pulse 1s infinite alternate;
+        }
+
+        .speaking {
+            background: radial-gradient(circle, rgba(211,131,255,0.9) 0%, rgba(131,164,255,0.5) 60%, transparent 80%);
+            box-shadow: 0 0 50px rgba(211,131,255,0.7), 0 0 100px rgba(131,164,255,0.5);
+            animation: morph 0.5s infinite alternate;
+        }
+
+        @keyframes breathe {
+            0% { transform: scale(0.9); opacity: 0.5; }
+            100% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.2); }
+        }
+
+        @keyframes morph {
+            0% { transform: scale(1) rotate(0deg); border-radius: 50%; }
+            100% { transform: scale(1.3) rotate(10deg); border-radius: 40% 60% 60% 40%; }
+        }
+
+        #transcript {
+            min-height: 50px;
+            font-size: 0.9rem;
+            color: #ccc;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+
+        #wake-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #wake-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glass-container">
+        <h1 class="title">Zoya</h1>
+        <p class="subtitle">Your Sassy AI Assistant</p>
+        
+        <!-- The Glowing Visualizer -->
+        <div id="visualizer" class="idle"></div>
+        
+        <p id="transcript">Waiting for your command, Ashwani...</p>
+        
+        <button id="wake-btn">Wake Zoya</button>
+    </div>
+
+    <script>
+        // PUT YOUR GEMINI API KEY HERE
+        const GEMINI_API_KEY = "YOUR_NEW_API_KEY_HERE"; 
+
+        const wakeBtn = document.getElementById('wake-btn');
+        const transcriptDisplay = document.getElementById('transcript');
+        const visualizer = document.getElementById('visualizer');
+
+        // Check if browser supports Speech Recognition
+        window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!window.SpeechRecognition) {
+            transcriptDisplay.innerText = "Error: Your browser does not support Voice Recognition. Please use Google Chrome.";
+        } else {
+            const recognition = new SpeechRecognition();
+            const synth = window.speechSynthesis;
+
+            recognition.continuous = false;
+            recognition.lang = 'en-IN'; // Indian English
+            recognition.interimResults = false;
+
+            // Visualizer Control
+            function setVisualizer(state) {
+                visualizer.className = state;
+            }
+
+            // Start listening
+            wakeBtn.addEventListener('click', () => {
+                try {
+                    recognition.start();
+                    setVisualizer('listening');
+                    transcriptDisplay.innerText = "Listening...";
+                    wakeBtn.innerText = "Listening...";
+                } catch(e) {
+                    transcriptDisplay.innerText = "Please allow Microphone permission!";
+                }
+            });
+
+            // On Result
+            recognition.onresult = async (event) => {
+                const transcript = event.results[0][0].transcript.toLowerCase();
+                transcriptDisplay.innerText = `"${transcript}"`;
+                setVisualizer('idle');
+                wakeBtn.innerText = "Wake Zoya";
+                processCommand(transcript);
+            };
+
+            // On Error
+            recognition.onerror = (event) => {
+                setVisualizer('idle');
+                wakeBtn.innerText = "Wake Zoya";
+                if(event.error === 'not-allowed') {
+                    transcriptDisplay.innerText = "Microphone access blocked! Please allow mic permission.";
+                } else {
+                    transcriptDisplay.innerText = "Ugh, I couldn't hear you. Try again.";
+                }
+            };
+
+            // Process Commands
+            async function processCommand(command) {
+                if (command.includes("open ")) {
+                    const site = command.split("open ")[1].trim().replace(/\s+/g, '');
+                    speakText(`Ugh, fine. Opening ${site} for you, Ashwani.`);
+                    window.open(`https://www.${site}.com`, '_blank');
+                    return;
+                }
+                if (command.includes("play ") && command.includes("on youtube")) {
+                    const query = command.replace("play", "").replace("on youtube", "").trim();
+                    speakText(`Playing ${query} on YouTube. Try not to get distracted.`);
+                    window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, '_blank');
+                    return;
+                }
+                // General Chat to Gemini
+                await chatWithZoya(command);
+            }
+
+            // Chat with Gemini
+            async function chatWithZoya(text) {
+                setVisualizer('speaking');
+                transcriptDisplay.innerText = "Thinking...";
+
+                const systemPrompt = `Your name is Zoya. You are an Indian female AI assistant. Your creator is Ashwani. 
+                Personality: Highly intelligent, witty, sassy, mildly dramatic. Keep responses very short (1-2 sentences), punchy, and highly entertaining. Use Hinglish.
+                User says: ${text}`;
+
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{ parts:[{ text: systemPrompt }] }]
+                        })
+                    });
+
+                    const data = await response.json();
+                    const aiResponse = data.candidates[0].content.parts[0].text;
+                    
+                    transcriptDisplay.innerText = aiResponse;
+                    speakText(aiResponse);
+
+                } catch (error) {
+                    speakText("Arre yaar, my brain is fried. Check your internet or API key.");
+                    setVisualizer('idle');
+                }
+            }
+
+            // Speak response
+            function speakText(text) {
+                setVisualizer('speaking');
+                const cleanText = text.replace(/\*/g, '');
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                
+                const voices = synth.getVoices();
+                const indianVoice = voices.find(voice => voice.lang.includes('en-IN') && voice.name.includes('Female')) 
+                                 || voices.find(voice => voice.lang.includes('en-IN')) || voices[0];
+                
+                if (indianVoice) utterance.voice = indianVoice;
+                utterance.pitch = 1.2;
+                utterance.rate = 1.0; 
+
+                utterance.onend = () => { setVisualizer('idle'); };
+                synth.speak(utterance);
+            }
+
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = () => synth.getVoices();
+            }
+        }
+    </script>
+</body>
+</html>
