@@ -120,7 +120,8 @@
 
     <script>
         // ================= CONFIGURATION =================
-        const GEMINI_API_KEY = "AIzaSyA8GBbG8SuOwC6Nh-9cgP2dpg-FwKv8WvM"; // <--- Your API key is added here
+        // আপনার দেওয়া নতুন API Key অ্যাড করা হয়েছে
+        const GEMINI_API_KEY = "AIzaSyAoxtMLEQz-nj9FgUAa4VIcSXCTAVLXntc"; 
         
         const CREATOR_NAME = "Abhijit Halder";
         const SYSTEM_PROMPT = `Your name is Zoya. You are an Indian female AI assistant. Your creator is ${CREATOR_NAME}. 
@@ -136,12 +137,10 @@
         const transcriptDisplay = document.getElementById('transcript-display');
         const micBtn = document.getElementById('mic-btn');
 
-        // Local Storage Memory Setup (Basic Database Alternative)
         let chatHistory = JSON.parse(localStorage.getItem('zoya_memory')) || [];
 
         function saveToMemory(role, text) {
             chatHistory.push({ role, parts:[{ text }] });
-            // Keep only last 10 messages to save context limit
             if (chatHistory.length > 10) chatHistory.shift();
             localStorage.setItem('zoya_memory', JSON.stringify(chatHistory));
         }
@@ -151,7 +150,7 @@
         const recognition = new SpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = false;
-        recognition.lang = 'en-IN'; // Works well for Hinglish
+        recognition.lang = 'en-IN'; 
 
         recognition.onstart = () => {
             setVisualState('listening');
@@ -162,8 +161,6 @@
             const transcript = event.results[0][0].transcript.toLowerCase();
             transcriptDisplay.innerText = `"${transcript}"`;
             setVisualState('idle');
-            
-            // Keyword routing / Actions
             handleCommand(transcript);
         };
 
@@ -182,7 +179,6 @@
         async function handleCommand(command) {
             statusText.innerText = "Processing...";
             
-            // 1. General Browsing
             if (command.startsWith('open ')) {
                 const site = command.replace('open ', '').trim().replace(/\s/g, '');
                 speak(`Opening ${site}, boss. Don't complain if your internet is slow.`);
@@ -190,7 +186,6 @@
                 return;
             }
             
-            // 2. YouTube Search
             if (command.includes('play ') || command.includes('on youtube')) {
                 let query = command.replace('play', '').replace('on youtube', '').trim();
                 speak(`Uff, your music taste Abhijit... Fine, playing ${query} on YouTube.`);
@@ -198,7 +193,6 @@
                 return;
             }
 
-            // 3. WhatsApp Message
             if (command.includes('whatsapp') && command.includes('saying')) {
                 const parts = command.split('saying');
                 const numberMatch = parts[0].match(/\d+/);
@@ -213,11 +207,10 @@
                 return;
             }
 
-            // 4. General Chit Chat (Gemini AI)
             await chatWithZoya(command);
         }
 
-        // ================= GEMINI API (BRAIN) =================
+        // ================= GEMINI API (BRAIN - FIXED) =================
         async function chatWithZoya(userText) {
             saveToMemory("user", userText);
 
@@ -226,22 +219,29 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        system_instruction: { parts:[{ text: SYSTEM_PROMPT }] },
-                        contents: chatHistory // Sending past memory context
+                        systemInstruction: { parts:[{ text: SYSTEM_PROMPT }] }, // system_instruction থেকে systemInstruction করা হয়েছে
+                        contents: chatHistory 
                     })
                 });
 
                 const data = await response.json();
+                
+                // এরর ধরার জন্য নতুন কোড
+                if (!response.ok || data.error) {
+                    console.error("Google API Error:", data.error ? data.error.message : "Unknown Error");
+                    speak("Abhijit, API key ba internet e problem aache. Console check koro.");
+                    return;
+                }
                 
                 if (data.candidates && data.candidates.length > 0) {
                     const aiReply = data.candidates[0].content.parts[0].text;
                     saveToMemory("model", aiReply);
                     speak(aiReply);
                 } else {
-                    speak("Abhijit, API ne dhoka de diya. Check your key.");
+                    speak("Abhijit, API theke kono reply aseni.");
                 }
             } catch (error) {
-                console.error(error);
+                console.error("Network or Code Error:", error);
                 speak("Uff! Mera brain freeze ho gaya. Internet check karo apna.");
             }
         }
@@ -251,15 +251,13 @@
             setVisualState('speaking');
             transcriptDisplay.innerText = `"${text}"`;
             
-            // Clean up text for TTS (remove asterisks or markdown)
             const cleanText = text.replace(/[*_]/g, '');
             
             const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.lang = 'hi-IN'; // Indian accent female voice
-            utterance.pitch = 1.2;    // Slightly higher pitch for young sass
-            utterance.rate = 1.05;    // Slightly faster
+            utterance.lang = 'hi-IN'; 
+            utterance.pitch = 1.2;    
+            utterance.rate = 1.05;    
             
-            // Try to find a female Indian voice
             const voices = window.speechSynthesis.getVoices();
             const femaleVoice = voices.find(v => v.lang === 'hi-IN' || v.name.includes('Female'));
             if (femaleVoice) utterance.voice = femaleVoice;
@@ -271,7 +269,6 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // Prevent voices from not loading on first try
         window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
 
         // ================= UI CONTROLS =================
@@ -283,9 +280,8 @@
         }
 
         micBtn.addEventListener('click', () => {
-            // Wake Zoya manually
             if (appContainer.classList.contains('state-speaking')) {
-                window.speechSynthesis.cancel(); // Interrupt Zoya
+                window.speechSynthesis.cancel(); 
                 setVisualState('idle');
             }
             recognition.start();
