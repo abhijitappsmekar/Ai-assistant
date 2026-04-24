@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zoya - AI Voice Assistant</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background-color: #050505; background-image: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050505 100%); color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
@@ -45,8 +47,8 @@
     </button>
 
     <script>
-        // ================= CONFIGURATION (OPENAI) =================
-        const 17b45418-e41c-4079-853f-f218e4b9e3c7 = "sk-এখানে-আপনার-ওপেন-এআই-কি-টি-বসাবেন"; // <--- আপনার OpenAI API Key এখানে দিন
+        // ================= CONFIGURATION =================
+        const GEMINI_API_KEY = "AIzaSyAoxtMLEQz-nj9FgUAa4VIcSXCTAVLXntc"; 
         
         const CREATOR_NAME = "Abhijit Halder";
         const SYSTEM_PROMPT = `Your name is Zoya. You are an Indian female AI assistant. Your creator is ${CREATOR_NAME}. 
@@ -110,42 +112,40 @@
             await chatWithZoya(command);
         }
 
-        // ================= OPENAI API FETCH =================
+        // ================= GEMINI API (UNIVERSAL GEMINI-PRO FIX) =================
         async function chatWithZoya(userText) {
-            // OpenAI uses { role: "user", content: "text" }
-            chatHistory.push({ role: "user", content: userText });
+            chatHistory.push({ role: "user", parts: [{ text: userText }] });
+
+            // Using standard 'gemini-pro' and injecting system prompt directly to avoid compatibility issues
+            const apiContents = [
+                { role: "user", parts: [{ text: "INSTRUCTION: " + SYSTEM_PROMPT }] },
+                { role: "model", parts: [{ text: "Understood! I am Zoya, your sassy AI assistant. I will respond in short Hinglish." }] },
+                ...chatHistory
+            ];
 
             try {
-                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                // Changed from gemini-1.5-flash to gemini-pro
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${17b45418-e41c-4079-853f-f218e4b9e3c7}`
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        model: 'gpt-4o-mini', // Fastest and cheapest OpenAI model
-                        messages: [
-                            { role: 'system', content: SYSTEM_PROMPT },
-                            ...chatHistory
-                        ],
-                        max_tokens: 150 // Keep replies short
+                        contents: apiContents
                     })
                 });
 
                 const data = await response.json();
                 
                 if (!response.ok || data.error) {
-                    const errorMsg = data.error ? data.error.message : "Unknown API Error";
-                    transcriptDisplay.innerHTML = `<span style="color: #ff4d4d; font-weight: bold;">OpenAI Error: ${errorMsg}</span>`;
-                    speak("Abhijit, OpenAI API error de raha hai. Balance check koro.");
+                    const googleError = data.error ? data.error.message : "Unknown API Error";
+                    transcriptDisplay.innerHTML = `<span style="color: #ff4d4d; font-weight: bold;">Google Error: ${googleError}</span>`;
+                    speak("Abhijit, Google API phir se error de raha hai. Screen dekho.");
                     chatHistory.pop(); 
                     return;
                 }
                 
-                if (data.choices && data.choices.length > 0) {
-                    const aiReply = data.choices[0].message.content;
-                    // Save model reply memory
-                    chatHistory.push({ role: "assistant", content: aiReply });
+                if (data.candidates && data.candidates.length > 0) {
+                    const aiReply = data.candidates[0].content.parts[0].text;
+                    chatHistory.push({ role: "model", parts: [{ text: aiReply }] });
                     speak(aiReply);
                 }
             } catch (error) {
@@ -158,7 +158,7 @@
         function speak(text) {
             setVisualState('speaking');
             
-            if(!transcriptDisplay.innerHTML.includes("OpenAI Error") && !transcriptDisplay.innerHTML.includes("Network Error")) {
+            if(!transcriptDisplay.innerHTML.includes("Google Error") && !transcriptDisplay.innerHTML.includes("Network Error")) {
                 transcriptDisplay.innerText = `"${text}"`;
             }
             
